@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ReachSure Warangal - Enhanced Driver Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet-routing-machine/3.2.12/leaflet-routing-machine.css" />
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        #map {
+            width: 100%;
+            height: 100vh;
+        }
+        .header {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1000;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 10px 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+        .header h1 {
+            margin: 0;
+            color: #d32f2f;
+            font-size: 24px;
+        }
+        .notification {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            max-width: 500px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            z-index: 1000;
+            display: none;
+        }
+        .notification h2 {
+            margin-top: 0;
+            color: #d32f2f;
+        }
+        .notification-buttons {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 15px;
+        }
+        .btn {
+            margin-left: 10px;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .btn-accept {
+            background-color: #4caf50;
+            color: white;
+        }
+        .btn-reject {
+            background-color: #f44336;
+            color: white;
+        }
+        .route-info {
+            position: absolute;
+            top: 70px;
+            left: 10px;
+            z-index: 1000;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 10px 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            display: none;
+        }
+        .status-panel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 10px 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            min-width: 200px;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            margin-right: 10px;
+            background-color: #4caf50;
+        }
+        .traffic-legend {
+            position: absolute;
+            bottom: 20px;
+            right: 10px;
+            z-index: 1000;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 10px 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+        }
+        .legend-color {
+            width: 20px;
+            height: 10px;
+            margin-right: 10px;
+        }
+        .hospitals-panel {
+            position: absolute;
+            top: 150px;
+            right: 10px;
+            z-index: 1000;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 10px 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            max-width: 250px;
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
+        }
+        .hospital-item {
+            margin-bottom: 10px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        .hospital-name {
+            font-weight: bold;
+            color: #2196F3;
+        }
+        .hospital-distance {
+            font-size: 0.9em;
+            color: #666;
+        }
+        .hospital-capacity {
+            display: inline-block;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-size: 0.8em;
+            margin-top: 5px;
+        }
+        .low-capacity {
+            background-color: #ffcdd2;
+            color: #c62828;
+        }
+        .medium-capacity {
+            background-color: #fff9c4;
+            color: #f57f17;
+        }
+        .high-capacity {
+            background-color: #c8e6c9;
+            color: #2e7d32;
+        }
+        .route-options {
+            position: absolute;
+            top: 140px;
+            left: 10px;
+            z-index: 1000;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 10px 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            display: none;
+        }
+        .patient-info-panel {
+            position: absolute;
+            bottom: 100px;
+            right: 10px;
+            z-index: 1000;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 10px 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            max-width: 250px;
+            display: none;
+        }
+        .critical {
+            color: #d32f2f;
+            font-weight: bold;
+        }
+        .other-ambulances {
+            position: absolute;
+            top: 210px;
+            left: 10px;
+            z-index: 1000;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 10px 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            max-width: 250px;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+        }
+        .ambulance-item {
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+        }
+        .ambulance-status {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .available {
+            background-color: #4caf50;
+        }
+        .busy {
+            background-color: #f44336;
+        }
+        .en-route {
+            background-color: #ff9800;
+        }
+        .quick-actions {
+            position: absolute;
+            bottom: 20px;
+            left: 10px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .action-btn {
+            background-color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+        }
+        .action-btn i {
+            font-size: 24px;
+            color: #333;
+        }
+        .tooltip {
+            position: absolute;
+            left: 60px;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            display: none;
+        }
+        .action-btn:hover .tooltip {
+            display: block;
+        }
+        .shift-timer {
+            background-color: #f1f1f1;
+            padding: 5px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        #analytics-panel {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            z-index: 2000;
+            width: 80%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+            display: none;
+        }
+        #analytics-panel h2 {
+            margin-top: 0;
+            color: #2196F3;
+        }
+        .chart-container {
+            height: 300px;
+            margin: 20px 0;
+        }
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #666;
+        }
+        /* Spinner for loading states */
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border-left-color: #09f;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .voice-alert {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            font-size: 18px;
+            z-index: 2000;
+            text-align: center;
+            display: none;
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+</head>
+<body>
+    <div class="header">
+        <h1>ReachSure Warangal</h1>
+    </div>
+    
+    <div class="status-panel">
+        <div><span class="status-indicator"></span> <span id="status-text">On Duty</span></div>
+        <div id="shift-data" class="shift-timer">Shift: 3h 27m / 8h</div>
+        <div>
+            <select id="driver-status" class="form-control" style="margin-top: 10px; width: 100%;">
+                <option value="on-duty">On Duty</option>
+                <option value="on-break">On Break</option>
+                <option value="off-duty">Off Duty</option>
+            </select>
+        </div>
+    </div>
+    
+    <div class="notification" id="notification">
+        <h2>New Emergency Request</h2>
+        <div id="patient-details">
+            <p><strong>Patient:</strong> <span id="patient-name">Raj Kumar</span></p>
+            <p><strong>Location:</strong> <span id="patient-location">Near NIT Warangal</span></p>
+            <p><strong>Condition:</strong> <span id="patient-condition" class="critical">Severe chest pain (possible cardiac)</span></p>
+            <p><strong>Distance:</strong> <span id="notification-distance">Calculating...</span></p>
+            <p><strong>ETA:</strong> <span id="notification-eta">Calculating...</span></p>
+        </div>
+        <div class="notification-buttons">
+            <button class="btn btn-reject" id="reject-btn">Reject</button>
+            <button class="btn btn-accept" id="accept-btn">Accept</button>
+        </div>
+    </div>
+    
+    <div class="route-info" id="route-info">
+        <div id="distance"><strong>Distance:</strong> Calculating...</div>
+        <div id="eta"><strong>ETA:</strong> Calculating...</div>
+        <div id="traffic-status"><strong>Traffic:</strong> Moderate</div>
+    </div>
+    
+    <div class="route-options" id="route-options">
+        <h3>Route Options</h3>
+        <div>
+            <input type="radio" id="fastest" name="route-type" value="fastest" checked>
+            <label for="fastest">Fastest Route</label>
+        </div>
+        <div>
+            <input type="radio" id="shortest" name="route-type" value="shortest">
+            <label for="shortest">Shortest Route</label>
+        </div>
+        <div style="margin-top: 10px;">
+            <input type="checkbox" id="avoid-traffic" name="avoid-traffic">
+            <label for="avoid-traffic">Avoid Heavy Traffic</label>
+        </div>
+        <div>
+            <input type="checkbox" id="avoid-construction" name="avoid-construction">
+            <label for="avoid-construction">Avoid Construction</label>
+        </div>
+        <button id="recalculate-route" class="btn btn-accept" style="margin-top: 10px;">Update Route</button>
+    </div>
+    
+    <div class="traffic-legend">
+        <h4 style="margin-top: 0;">Traffic Conditions</h4>
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: #4caf50;"></div>
+            <span>Light</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: #ff9800;"></div>
+            <span>Moderate</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: #f44336;"></div>
+            <span>Heavy</span>
+        </div>
+    </div>
+    
+    <div class="hospitals-panel" id="hospitals-panel">
+        <h3>Nearby Hospitals</h3>
+        <div id="hospitals-list">
+            <div class="hospital-item">
+                <div class="hospital-name">MGM Hospital</div>
+                <div class="hospital-distance">2.3 km away</div>
+                <div class="hospital-capacity medium-capacity">Medium Capacity (65%)</div>
+            </div>
+            <div class="hospital-item">
+                <div class="hospital-name">Rohini Super Specialty Hospital</div>
+                <div class="hospital-distance">3.8 km away</div>
+                <div class="hospital-capacity high-capacity">High Capacity (30%)</div>
+            </div>
+            <div class="hospital-item">
+                <div class="hospital-name">Lifeline Emergency Hospital</div>
+                <div class="hospital-distance">5.2 km away</div>
+                <div class="hospital-capacity low-capacity">Low Capacity (92%)</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="patient-info-panel" id="patient-info">
+        <h3>Patient Information</h3>
+        <div><strong>Name:</strong> Raj Kumar</div>
+        <div><strong>Age:</strong> 58</div>
+        <div><strong>Blood Type:</strong> O+</div>
+        <div><strong>Condition:</strong> <span class="critical">Severe chest pain (possible cardiac)</span></div>
+        <div><strong>Medical History:</strong> Hypertension, Previous minor stroke (2023)</div>
+        <div style="margin-top: 10px;"><strong>Emergency Protocol:</strong> Cardiac Assessment Protocol</div>
+        <button id="view-protocol" class="btn btn-accept" style="margin-top: 10px; width: 100%;">View Protocol</button>
+    </div>
+    
+    <div class="other-ambulances" id="other-ambulances">
+        <h3>Other Ambulances</h3>
+        <div id="ambulances-list">
+            <div class="ambulance-item">
+                <span class="ambulance-status available"></span>
+                <span>Ambulance #102 (3.5 km away)</span>
+            </div>
+            <div class="ambulance-item">
+                <span class="ambulance-status en-route"></span>
+                <span>Ambulance #105 (1.8 km away)</span>
+            </div>
+            <div class="ambulance-item">
+                <span class="ambulance-status busy"></span>
+                <span>Ambulance #109 (4.2 km away)</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="quick-actions">
+        <button class="action-btn" id="call-patient">
+            <i class="fas fa-phone"></i>
+            <span class="tooltip">Call Patient</span>
+        </button>
+        <button class="action-btn" id="sms-update">
+            <i class="fas fa-comment"></i>
+            <span class="tooltip">Send ETA Update</span>
+        </button>
+        <button class="action-btn" id="toggle-hospitals">
+            <i class="fas fa-hospital"></i>
+            <span class="tooltip">Show Hospitals</span>
+        </button>
+        <button class="action-btn" id="toggle-patient-info">
+            <i class="fas fa-user-injured"></i>
+            <span class="tooltip">Patient Info</span>
+        </button>
+        <button class="action-btn" id="toggle-ambulances">
+            <i class="fas fa-ambulance"></i>
+            <span class="tooltip">Other Ambulances</span>
+        </button>
+        <button class="action-btn" id="show-analytics">
+            <i class="fas fa-chart-line"></i>
+            <span class="tooltip">Show Analytics</span>
+        </button>
+    </div>
+    
+    <div id="analytics-panel">
+        <button class="close-btn">&times;</button>
+        <h2>Response Analytics</h2>
+        <div class="chart-container">
+            <canvas id="response-times-chart"></canvas>
+        </div>
+        <div class="chart-container">
+            <canvas id="service-areas-chart"></canvas>
+        </div>
+        <h3>Performance Metrics</h3>
+        <ul>
+            <li>Average Response Time: 7.2 minutes</li>
+            <li>Acceptance Rate: 94%</li>
+            <li>Average Speed: 38 km/h</li>
+            <li>Most Common Areas: Hanumakonda, Kazipet, Warangal Fort area</li>
+        </ul>
+    </div>
+    
+    <div class="voice-alert" id="voice-alert"></div>
+    
+    <div id="map"></div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-routing-machine/3.2.12/leaflet-routing-machine.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    
+    <script>
+        // Initialize the map centered on Warangal
+        const map = L.map('map').setView([17.9689, 79.5941], 14);
+        
+        // Add OpenStreetMap layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+        
+        // Custom marker icons
+        const driverIcon = L.icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+            shadowSize: [41, 41]
+        });
+        
+        const patientIcon = L.icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+            shadowSize: [41, 41]
+        });
+        
+        const hospitalIcon = L.icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+            shadowSize: [41, 41]
+        });
+        
+        // Simulated driver location (near Warangal Fort)
+        const driverLocation = [17.9689, 79.5941];
+        const driverMarker = L.marker(driverLocation, {icon: driverIcon}).addTo(map)
+            .bindPopup("Your Location");
+        
+        // Simulated patient location (near NIT Warangal)
+        const patientLocation = [17.9829, 79.5330];
+        let patientMarker = null;
+        
+        // Hospital locations
+        const hospitals = [
+            { name: "MGM Hospital", location: [17.9702, 79.5900], capacity: 65 },
+            { name: "Rohini Super Specialty Hospital", location: [17.9753, 79.6032], capacity: 30 },
+            { name: "Lifeline Emergency Hospital", location: [17.9589, 79.5841], capacity: 92 }
+        ];
+        
+        const hospitalMarkers = hospitals.map(hospital => 
+            L.marker(hospital.location, {icon: hospitalIcon})
+             .bindPopup(`<b>${hospital.name}</b><br>Capacity: ${hospital.capacity}%`)
+        );
+        
+        // Other ambulances
+        const otherAmbulances = [
+            { id: 102, location: [17.9802, 79.6032], status: 'available' },
+            { id: 105, location: [17.9645, 79.5867], status: 'en-route' },
+            { id: 109, location: [17.9533, 79.5941], status: 'busy' }
+        ];
+        
+        const ambulanceIcons = {
+            'available': L.icon({
+                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
+                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+                shadowSize: [41, 41]
+            }),
+            'en-route': L.icon({
+                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png',
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
+                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+                shadowSize: [41, 41]
+            }),
+            'busy': L.icon({
+                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
+                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+                shadowSize: [41, 41]
+            })
+        };
+        
+        const ambulanceMarkers = otherAmbulances.map(ambulance => 
+            L.marker(ambulance.location, {icon: ambulanceIcons[ambulance.status]})
+             .bindPopup(`<b>Ambulance #${ambulance.id}</b><br>Status: ${ambulance.status}`)
+        );
+        
+        // Variable to store the routing control
+        let routeControl = null;
+        let currentRouteType = 'fastest';
+        let avoidTraffic = false;
+        let avoidConstruction = false;
+        
+        // Simulated traffic segments
+        const trafficSegments = [
+            { start: [17.9750, 79.5600], end: [17.9780, 79.5550], level: 'heavy' },
+            { start: [17.9780, 79.5550], end: [17.9800, 79.5500], level: 'heavy' },
+            { start: [17.9690, 79.5800], end: [17.9720, 79.5750], level: 'moderate' },
+            { start: [17.9720, 79.5750], end: [17.9750, 79.5700], level: 'moderate' }
+        ];
+        
+        // Draw traffic segments
+        const trafficColors = {
+            'light': '#4caf50',
+            'moderate': '#ff9800',
+            'heavy': '#f44336'
+        };
+        
+        trafficSegments.forEach(segment => {
+            L.polyline([segment.start, segment.end], {
+                color: trafficColors[segment.level],
+                weight: 6,
+                opacity: 0.7,
+                dashArray: segment.level === 'heavy' ? '5, 10' : null
+            }).addTo(map).bindPopup(`${segment.level.charAt(0).toUpperCase() + segment.level.slice(1)} traffic`);
+        });
+        
+        // Simulated construction areas
+        const constructionAreas = [
+            { center: [17.9720, 79.5650], radius: 200 }
+        ];
+        
+        constructionAreas.forEach(area => {
+            L.circle(area.center, {
+                color: '#f57f17',
+                fillColor: '#f57f17',
+                fillOpacity: 0.3,
+                radius: area.radius
+            }).addTo(map).bindPopup('Construction Area');
+        });
+        
+        // Function to calculate and display the route
+        function calculateRoute() {
+            if (routeControl) {
+                map.removeControl(routeControl);
+            }
+            
+            // Determine route options based on selections
+            let routeOptions = {};
+            
+            if (currentRouteType === 'fastest') {
+                routeOptions = { routeWhileDragging: false };
+            } else if (currentRouteType === 'shortest') {
+                routeOptions = { 
+                    routeWhileDragging: false,
+                    router: L.Routing.osrmv1({
+                        serviceUrl: 'https://router.project-osrm.org/route/v1',
+                        profile: 'driving'
+                    })
+                };
+            }
+            
+            // Create routing control with custom line style
+            routeControl = L.Routing.control({
+                waypoints: [
+                    L.latLng(driverLocation[0], driverLocation[1]),
+                    L.latLng(patientLocation[0], patientLocation[1])
+                ],
+                lineOptions: {
+                    styles: [
+                        {color: 'red', opacity: 0.8, weight: 5}
+                    ]
+                },
+                createMarker: function() { return null; }, // Don't create default markers
+                addWaypoints: false,
+                draggableWaypoints: false,
+                fitSelectedRoutes: true,
+                showAlternatives: false,
+                ...routeOptions
+            }).addTo(map);
+            
+            // Listen for route calculation complete
+            routeControl.on('routesfound', function(e) {
+                const routes = e.routes;
+                const summary = routes[0].summary;
+                
+                // Calculate distance in kilometers
+                const distanceInKm = (summary.totalDistance / 1000).toFixed(1);
+                
+                // Calculate time in minutes, taking into account simulated traffic
+                let timeInMinutes = Math.ceil(summary.totalTime / 60);
+                
+                // Check if route passes through heavy traffic
+                let hasHeavyTraffic = false;
+                let hasModerateTraffic = false;
+                
+                if (e.routes[0] && e.routes[0].coordinates) {
+                    const routeCoords = e.routes[0].coordinates;
+                    
+                    // Very basic check if route passes through our predefined traffic segments
+                    trafficSegments.forEach(segment => {
+                        // Simple bounding box check - this is just for simulation

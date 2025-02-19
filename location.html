@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ReachSure - Driver Dashboard</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: #f5f5f5;
+            min-height: 100vh;
+        }
+
+        .dashboard-header {
+            background: #B22222;
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .logo-text {
+            font-size: 1.5em;
+            font-weight: 600;
+        }
+
+        .logout-btn {
+            background: #FF4444;
+            color: white;
+            padding: 8px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .logout-btn:hover {
+            background: #CC0000;
+        }
+
+        .map-container {
+            margin: 2rem auto;
+            width: 90%;
+            max-width: 1200px;
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: opacity 0.5s ease-out;
+        }
+
+        #map {
+            height: 500px;
+            border-radius: 10px;
+            margin-top: 20px;
+            border: 2px solid #ffe5e5;
+        }
+
+        .location-prompt {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .location-title {
+            color: #8B0000;
+            font-size: 2em;
+            margin-bottom: 1rem;
+        }
+
+        .location-text {
+            color: #666;
+            margin-bottom: 2rem;
+        }
+
+        .locate-btn {
+            background: #FF4444;
+            color: white;
+            padding: 15px 40px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(255,68,68,0.3);
+        }
+
+        .locate-btn:hover {
+            background: #CC0000;
+            transform: translateY(-2px);
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            color: #B22222;
+            margin: 20px 0;
+        }
+
+        .map-marker {
+            background: #FF4444;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            border: 3px solid white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .fade-out {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .success-message {
+            display: none;
+            text-align: center;
+            color: #28a745;
+            font-size: 1.2em;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <header class="dashboard-header">
+        <div class="logo-text">ReachSure Driver</div>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </header>
+
+    <div class="map-container" id="mainContainer">
+        <div class="location-prompt">
+            <h2 class="location-title">Emergency Location Tracking</h2>
+            <p class="location-text">Please share your current location to receive emergency alerts</p>
+            <button class="locate-btn" onclick="getLocation()">Share My Location</button>
+            <div class="loading" id="locate-loading">Locating your position...</div>
+            <div class="success-message" id="success-message">Location accessed successfully! Redirecting to dashboard...</div>
+        </div>
+        <div id="map"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script>
+        let map = null;
+        let marker = null;
+
+        function logout() {
+            window.location.href = 'index.html';
+        }
+
+        function getLocation() {
+            const loading = document.getElementById('locate-loading');
+            loading.style.display = 'block';
+            
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    showPosition,
+                    showError,
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 5000,
+                        maximumAge: 0
+                    }
+                );
+            } else {
+                loading.style.display = 'none';
+                alert("Geolocation is not supported by this browser.");
+            }
+        }
+
+        function showPosition(position) {
+            const loading = document.getElementById('locate-loading');
+            const successMessage = document.getElementById('success-message');
+            const mainContainer = document.getElementById('mainContainer');
+            
+            loading.style.display = 'none';
+            successMessage.style.display = 'block';
+            
+            // Initialize and update map
+            if (!map) {
+                map = L.map('map').setView(
+                    [position.coords.latitude, position.coords.longitude], 
+                    15
+                );
+
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(map);
+            }
+
+            if (marker) {
+                marker.setLatLng([position.coords.latitude, position.coords.longitude]);
+            } else {
+                marker = L.marker([position.coords.latitude, position.coords.longitude], {
+                    icon: L.divIcon({
+                        className: 'map-marker',
+                        iconSize: [40, 40]
+                    })
+                }).addTo(map)
+                .bindPopup('Your current location<br>Lat: ' + position.coords.latitude.toFixed(4) + 
+                         '<br>Lon: ' + position.coords.longitude.toFixed(4))
+                .openPopup();
+            }
+
+            // Add accuracy circle
+            L.circle([position.coords.latitude, position.coords.longitude], {
+                color: '#FF4444',
+                fillColor: '#FF4444',
+                fillOpacity: 0.2,
+                radius: position.coords.accuracy
+            }).addTo(map);
+
+            // Fade out after 2 seconds
+            setTimeout(() => {
+                mainContainer.classList.add('fade-out');
+                // Redirect after fade animation
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 500);
+            }, 2000);
+        }
+
+        function showError(error) {
+            const loading = document.getElementById('locate-loading');
+            loading.style.display = 'none';
+            
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    alert("Location access denied. Please enable permissions in your browser settings.");
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    alert("Location information is unavailable.");
+                    break;
+                case error.TIMEOUT:
+                    alert("The request to get location timed out.");
+                    break;
+                case error.UNKNOWN_ERROR:
+                    alert("An unknown error occurred.");
+                    break;
+            }
+        }
+
+        // Initialize map container
+        window.onload = function() {
+            if (document.getElementById('map')) {
+                map = L.map('map', {
+                    center: [20.5937, 78.9629], // Default to India coordinates
+                    zoom: 5
+                });
+                
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(map);
+            }
+        }
+    </script>
+</body>
+</html>

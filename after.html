@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ReachSure - Active Navigation (Warangal)</title>
+    <!-- Leaflet CSS for maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <!-- Leaflet Routing Machine for path calculation -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: #f5f5f5;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        #map {
+            height: 100vh;
+            width: 100%;
+            position: relative;
+            z-index: 1;
+        }
+
+        .logo-status-container {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+        }
+
+        .logo-text {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #B22222;
+            margin-left: 10px;
+        }
+
+        .active-status {
+            background: #32CD32;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            margin-left: 10px;
+        }
+
+        .patient-panel {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            width: 300px;
+        }
+
+        .patient-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .patient-pic {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: #1E90FF;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            color: white;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        .patient-name {
+            font-size: 1.2em;
+            font-weight: 600;
+            margin-bottom: 3px;
+        }
+
+        .patient-info {
+            color: #666;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+
+        .detail-label {
+            color: #666;
+            font-weight: 500;
+            width: 30%;
+        }
+
+        .detail-value {
+            font-weight: 500;
+            color: #333;
+            width: 70%;
+            text-align: right;
+        }
+
+        .critical {
+            color: #d32f2f;
+            font-weight: bold;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .action-btn i {
+            margin-right: 8px;
+        }
+
+        .btn-call {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-call:hover {
+            background: #45a049;
+        }
+
+        .btn-message {
+            background: #FF9800;
+            color: white;
+        }
+
+        .btn-message:hover {
+            background: #e68a00;
+        }
+
+        .navigation-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            width: 350px;
+            z-index: 1000;
+        }
+
+        .nav-instruction {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .progress-container {
+            height: 8px;
+            width: 100%;
+            background: #f1f1f1;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+
+        .progress-bar {
+            height: 8px;
+            width: 0;
+            background: #4CAF50;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .nav-info {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+
+        .nav-distance, .nav-eta {
+            text-align: center;
+            flex: 1;
+        }
+
+        .nav-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .nav-value {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .quick-actions {
+            position: absolute;
+            bottom: 20px;
+            left: 15px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .quick-action-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            cursor: pointer;
+            position: relative;
+        }
+
+        .quick-action-btn i {
+            font-size: 1.5em;
+            color: #333;
+        }
+
+        .tooltip {
+            position: absolute;
+            left: 60px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+            display: none;
+        }
+
+        .quick-action-btn:hover .tooltip {
+            display: block;
+        }
+
+        .voice-alert {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            font-size: 1.2em;
+            font-weight: 500;
+            z-index: 2000;
+            text-align: center;
+            display: none;
+        }
+
+        .ambulance-marker {
+            width: 40px;
+            height: 40px;
+            position: absolute;
+            z-index: 1001;
+            transform-origin: center;
+            transition: all 0.3s linear;
+        }
+
+        /* Hide routing machine control panel */
+        .leaflet-routing-container {
+            display: none !important;
+        }
+        
+        /* Customize route line */
+        .leaflet-routing-line {
+            stroke: #B22222 !important;
+            stroke-width: 5 !important;
+            stroke-opacity: 0.7 !important;
+            stroke-linecap: round !important;
+            stroke-linejoin: round !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="logo-status-container">
+        <i class="fas fa-ambulance" style="font-size: 22px; color: #B22222;"></i>
+        <div class="logo-text">ReachSure Warangal</div>
+        <div class="active-status">Active Trip</div>
+    </div>
+
+    <div class="patient-panel">
+        <div class="patient-header">
+            <div class="patient-pic">RS</div>
+            <div>
+                <div class="patient-name">Raju Sharma</div>
+                <div class="patient-info">58 years, Male</div>
+            </div>
+        </div>
+        
+        <div class="detail-row">
+            <div class="detail-label">Condition:</div>
+            <div class="detail-value critical">Severe chest pain (cardiac)</div>
+        </div>
+        <div class="detail-row">
+            <div class="detail-label">Blood Type:</div>
+            <div class="detail-value">O+</div>
+        </div>
+        <div class="detail-row">
+            <div class="detail-label">History:</div>
+            <div class="detail-value">Hypertension, Stroke (2023)</div>
+        </div>
+        <div class="detail-row">
+            <div class="detail-label">Phone:</div>
+            <div class="detail-value">+91 98451-23670</div>
+        </div>
+        <div class="detail-row">
+            <div class="detail-label">Hospital:</div>
+            <div class="detail-value">Medicover Hospital</div>
+        </div>
+        
+        <div class="action-buttons">
+            <button class="action-btn btn-call" id="call-btn"><i class="fas fa-phone"></i>Call</button>
+            <button class="action-btn btn-message" id="message-btn"><i class="fas fa-comment"></i>Message</button>
+        </div>
+    </div>
+
+    <div class="navigation-panel">
+        <div class="nav-instruction" id="nav-instruction">
+            <i class="fas fa-arrow-right" style="margin-right: 8px;"></i>
+            Continue straight for 0.5 km
+        </div>
+        <div class="progress-container">
+            <div class="progress-bar" id="progress-bar"></div>
+        </div>
+        <div class="nav-info">
+            <div class="nav-distance">
+                <div class="nav-label">DISTANCE</div>
+                <div class="nav-value" id="routeDistance">5.2 km</div>
+            </div>
+            <div class="nav-eta">
+                <div class="nav-label">ETA</div>
+                <div class="nav-value" id="routeTime">12 min</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="quick-actions">
+        <div class="quick-action-btn" id="toggle-traffic">
+            <i class="fas fa-road"></i>
+            <span class="tooltip">Toggle Traffic View</span>
+        </div>
+        <div class="quick-action-btn" id="show-hospitals">
+            <i class="fas fa-hospital"></i>
+            <span class="tooltip">Show Nearby Hospitals</span>
+        </div>
+        <div class="quick-action-btn" id="alert-patient">
+            <i class="fas fa-bell"></i>
+            <span class="tooltip">Send ETA Update</span>
+        </div>
+    </div>
+
+    <div class="voice-alert" id="voice-alert"></div>
+
+    <div id="map"></div>
+
+    <!-- Ambulance SVG Marker -->
+    <svg class="ambulance-marker" id="ambulance-marker" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M4 18C4 19.1046 3.10457 20 2 20C0.89543 20 0 19.1046 0 18C0 16.8954 0.89543 16 2 16C3.10457 16 4 16.8954 4 18Z" fill="#4285F4"/>
+        <path d="M24 18C24 19.1046 23.1046 20 22 20C20.8954 20 20 19.1046 20 18C20 16.8954 20.8954 16 22 16C23.1046 16 24 16.8954 24 18Z" fill="#4285F4"/>
+        <path d="M22 16H2V12C2 8.7 4.7 6 8 6H12L14 8H20C21.1 8 22 8.9 22 10V16Z" fill="#B22222"/>
+        <path d="M4 18C4 19.1046 3.10457 20 2 20C0.89543 20 0 19.1046 0 18C0 16.8954 0.89543 16 2 16C3.10457 16 4 16.8954 4 18Z" stroke="black" stroke-width="0.5"/>
+        <path d="M24 18C24 19.1046 23.1046 20 22 20C20.8954 20 20 19.1046 20 18C20 16.8954 20.8954 16 22 16C23.1046 16 24 16.8954 24 18Z" stroke="black" stroke-width="0.5"/>
+        <path d="M22 16H2V8C2 5.79086 3.79086 4 6 4H16L18 6H20C21.1046 6 22 6.89543 22 8V16Z" stroke="black" stroke-width="0.5"/>
+        <rect x="9" y="8" width="6" height="2" fill="white"/>
+        <rect x="9" y="11" width="2" height="2" fill="white"/>
+        <rect x="13" y="11" width="2" height="2" fill="white"/>
+        <circle cx="21" cy="11" r="1" fill="red"/>
+        <circle cx="3" cy="11" r="1" fill="white"/>
+    </svg>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <!-- Leaflet Routing Machine JS -->
+    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+    
+    <script>
+        // Warangal coordinates
+        const WARANGAL_CENTER = [17.9689, 79.5941];
+        
+        // Driver and patient locations
+        const driverLocation = [17.9749, 79.6036]; // Warangal Fort area
+        const patientLocation = [17.9817, 79.5332]; // NIT Warangal area
+        
+        let map = null;
+        let routeControl = null;
+        let ambulanceMarker = null;
+        let routePoints = [];
+        let totalDistance = 5.2; // km
+        let totalTime = 12; // minutes
+        let currentPosition = 0;
+        let pathAnimation = null;
+        let buzzerSound = null;
+        
+        // Initialize map
+        window.onload = function() {
+            initializeMap();
+            
+            // Create audio element for buzzer sound
+            buzzerSound = new Audio();
+            buzzerSound.src = "https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3";
+            buzzerSound.loop = false;
+            buzzerSound.play().catch(e => console.log("Audio play failed:", e));
+        }
+
+        function initializeMap() {
+            map = L.map('map', {
+                zoomControl: true,
+                attributionControl: false
+            }).setView(driverLocation, 14);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+            
+            // Calculate route and start navigation
+            calculateRoute();
+        }
+
+        function calculateRoute() {
+            if (map) {
+                // Create route
+                routeControl = L.Routing.control({
+                    waypoints: [
+                        L.latLng(driverLocation),
+                        L.latLng(patientLocation)
+                    ],
+                    lineOptions: {
+                        styles: [
+                            {color: '#B22222', opacity: 0.8, weight: 5}
+                        ],
+                        extendToWaypoints: true,
+                        missingRouteTolerance: 0
+                    },
+                    createMarker: function(i, waypoint, n) {
+                        // Only create marker for the patient (destination)
+                        if (i === n - 1) {
+                            const customIcon = L.divIcon({
+                                html: `
+                                <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24">
+                                    <path fill="#FF4444" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                                </svg>
+                                `,
+                                className: '',
+                                iconSize: [30, 30],
+                                iconAnchor: [15, 30]
+                            });
+                            
+                            return L.marker(waypoint.latLng, {
+                                icon: customIcon
+                            }).bindPopup("Patient: Raju Sharma");
+                        }
+                        return null;
+                    },
+                    showAlternatives: false,
+                    fitSelectedRoutes: true,
+                    routeWhileDragging: false
+                }).addTo(map);
+                
+                // Listen for route calculation to update distance, time and start animation
+                routeControl.on('routesfound', function(e) {
+                    const routes = e.routes;
+                    const summary = routes[0].summary;
+                    const coordinates = routes[0].coordinates;
+                    
+                    // Store route points for animation
+                    routePoints = coordinates;
+                    
+                    // Convert distance from meters to kilometers
+                    totalDistance = (summary.totalDistance / 1000).toFixed(1);
+                    
+                    // Convert time from seconds to minutes
+                    totalTime = Math.round(summary.totalTime / 60);
+                    
+                    // Update route info
+                    document.getElementById('routeDistance').textContent = totalDistance + ' km';
+                    document.getElementById('routeTime').textContent = totalTime + ' min';
+                    
+                    // Start animation
+                    startAmbulanceAnimation();
+                    
+                    // Adjust map to show part of the route
+                    adjustMapView(0);
+                    
+                    // Show voice alert
+                    showVoiceAlert("Navigation started to patient location");
+                });
+            }
+        }
+
+        function startAmbulanceAnimation() {
+            // Get the ambulance marker element
+            ambulanceMarker = document.getElementById('ambulance-marker');
+            
+            if (routePoints.length === 0 || !ambulanceMarker) return;
+            
+            // Position ambulance at the start
+            updateAmbulancePosition(0);
+            
+            // Start animation loop
+            pathAnimation = setInterval(() => {
+                // Increment position counter
+                currentPosition += 1;
+                
+                // Check if we've reached the end
+                if (currentPosition >= routePoints.length - 1) {
+                    clearInterval(pathAnimation);
+                    showVoiceAlert("You have arrived at the patient's location");
+                    return;
+                }
+                
+                // Update ambulance position
+                updateAmbulancePosition(currentPosition);
+                
+                // Update progress bar
+                const progress = currentPosition / (routePoints.length - 1);
+                document.getElementById('progress-bar').style.width = `${progress * 100}%`;
+                
+                // Update remaining distance and time
+                const remainingDistance = (totalDistance * (1 - progress)).toFixed(1);
+                const remainingTime = Math.ceil(totalTime * (1 - progress));
+                document.getElementById('routeDistance').textContent = remainingDistance + ' km';
+                document.getElementById('routeTime').textContent = remainingTime + ' min';
+                
+                // Update navigation instructions
+                updateNavigationInstruction(progress);
+                
+                // Periodically adjust map view to follow ambulance
+                if (currentPosition % 30 === 0) {
+                    adjustMapView(currentPosition);
+                }
+                
+            }, 100); // Animation speed
+        }
+
+        function updateAmbulancePosition(index) {
+            if (!ambulanceMarker || index >= routePoints.length) return;
+            
+            const point = routePoints[index];
+            const pos = map.latLngToContainerPoint([point.lat, point.lng]);
+            
+            // Calculate rotation angle (direction of movement)
+            let angle = 0;
+            if (index > 0) {
+                const prev = routePoints[index - 1];
+                const curr = point;
+                angle = getBearing(
+                    [prev.lat, prev.lng],
+                    [curr.lat, curr.lng]
+                );
+            }
+            
+            // Update position and rotation
+            ambulanceMarker.style.left = (pos.x - 20) + 'px';  // Center horizontally
+            ambulanceMarker.style.top = (pos.y - 20) + 'px';   // Center vertically
+            ambulanceMarker.style.transform = `rotate(${angle}deg)`;
+        }
+
+        function updateNavigationInstruction(progress) {
+            const navInstruction = document.getElementById('nav-instruction');
+            
+            if (progress < 0.2) {
+                navInstruction.innerHTML = '<i class="fas fa-arrow-right" style="margin-right: 8px;"></i>Continue straight toward Hanamkonda Road';
+            } else if (progress < 0.4) {
+                navInstruction.innerHTML = '<i class="fas fa-arrow-up" style="margin-right: 8px;"></i>Continue straight for 2.1 km';
+            } else if (progress < 0.6) {
+                navInstruction.innerHTML = '<i class="fas fa-arrow-right" style="margin-right: 8px;"></i>Turn right onto Kakatiya University Road';
+            } else if (progress < 0.8) {
+                navInstruction.innerHTML = '<i class="fas fa-arrow-up" style="margin-right: 8px;"></i>Continue toward NIT campus';
+            } else {
+                navInstruction.innerHTML = '<i class="fas fa-location-dot" style="margin-right: 8px;"></i>Arriving at patient location';
+            }
+        }
+
+        function adjustMapView(index) {
+            if (!map || !routePoints[index]) return;
+            
+            const point = routePoints[index];
+            map.setView([point.lat, point.lng], 15, {
+                animate: true,
+                duration: 1
+            });
+        }
+
+        function showVoiceAlert(message) {
+            const alertElement = document.getElementById('voice-alert');
+            alertElement.textContent = message;
+            alertElement.style.display = 'block';
+            
+            // Play notification sound
+            buzzerSound.play().catch(e => console.log("Audio play failed:", e));
+            
+            setTimeout(() => {
+                alertElement.style.display = 'none';
+            }, 3000);
+        }
+
+        // Helper function to calculate bearing between two points
+        function getBearing(start, end) {
+            const startLat = start[0] * Math.PI / 180;
+            const startLng = start[1] * Math.PI / 180;
+            const endLat = end[0] * Math.PI / 180;
+            const endLng = end[1] * Math.PI / 180;
+            
+            const dLng = endLng - startLng;
+            
+            const y = Math.sin(dLng) * Math.cos(endLat);
+            const x = Math.cos(startLat) * Math.sin(endLat) - 
+                     Math.sin(startLat) * Math.cos(endLat) * Math.cos(dLng);
+            
+            let brng = Math.atan2(y, x) * 180 / Math.PI;
+            brng = (brng + 360) % 360;
+            
+            return brng;
+        }
+
+        // Set up event listeners for buttons
+        document.getElementById('call-btn').addEventListener('click', function() {
+            showVoiceAlert("Calling patient...");
+        });
+        
+        document.getElementById('message-btn').addEventListener('click', function() {
+            showVoiceAlert("Message sent to patient");
+        });
+        
+        document.getElementById('toggle-traffic').addEventListener('click', function() {
+            showVoiceAlert("Traffic view toggled");
+        });
+        
+        document.getElementById('show-hospitals').addEventListener('click', function() {
+            showVoiceAlert("Showing nearby hospitals");
+        });
+        
+        document.getElementById('alert-patient').addEventListener('click', function() {
+            showVoiceAlert("ETA update sent to patient");
+        });
+        
+        // Handle map movements to keep ambulance positioned correctly
+        map?.on('zoom move', function() {
+            if (currentPosition < routePoints.length) {
+                updateAmbulancePosition(currentPosition);
+            }
+        });
+    </script>
+</body>
+</html>

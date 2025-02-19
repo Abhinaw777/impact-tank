@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ReachSure EMS - Payment Portal</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 30px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo {
+            max-width: 180px;
+            margin-bottom: 15px;
+        }
+        h1 {
+            color: #e74c3c;
+            margin: 0;
+            font-size: 24px;
+        }
+        .bill-details {
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+        }
+        .row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .label {
+            font-weight: 600;
+            color: #555;
+        }
+        .amount {
+            font-weight: 700;
+            font-size: 22px;
+            color: #e74c3c;
+        }
+        .payment-options {
+            margin-bottom: 30px;
+        }
+        .payment-title {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #333;
+            font-weight: 600;
+        }
+        .payment-methods {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .payment-method {
+            text-align: center;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            width: 100px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .payment-method:hover, .payment-method.selected {
+            border-color: #e74c3c;
+            background-color: #fff9f9;
+        }
+        .payment-method img {
+            height: 40px;
+            margin-bottom: 8px;
+        }
+        .payment-method-name {
+            font-size: 14px;
+            color: #555;
+        }
+        .payment-section {
+            text-align: center;
+            margin-top: 30px;
+            display: none;
+        }
+        .qr-container {
+            margin: 0 auto;
+            max-width: 200px;
+            padding: 15px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .upi-id {
+            margin-top: 15px;
+            font-weight: 600;
+            color: #333;
+            font-size: 18px;
+        }
+        .card-form {
+            text-align: left;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+            text-align: left;
+        }
+        .form-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        .form-row {
+            display: flex;
+            gap: 15px;
+        }
+        .form-row .form-group {
+            flex: 1;
+        }
+        .notes {
+            margin-top: 25px;
+            color: #777;
+            font-size: 14px;
+        }
+        .button {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            width: 100%;
+            margin-top: 20px;
+        }
+        .button:hover {
+            background-color: #c0392b;
+        }
+        .success-message {
+            display: none;
+            text-align: center;
+            background-color: #dff0d8;
+            color: #3c763d;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        .cost-breakdown {
+            border-top: 1px dashed #ddd;
+            margin-top: 15px;
+            padding-top: 15px;
+        }
+        .cost-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        .cash-instructions {
+            background-color: #fff9f9;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: left;
+            margin-bottom: 20px;
+        }
+        .cash-instructions ul {
+            padding-left: 20px;
+            margin: 10px 0;
+        }
+        .cash-instructions li {
+            margin-bottom: 8px;
+        }
+        .view-breakdown-btn {
+            background: none;
+            border: none;
+            color: #e74c3c;
+            cursor: pointer;
+            font-size: 14px;
+            text-decoration: underline;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="Screenshot_2025-02-15_190719-removebg-preview (2).png" alt="ReachSure EMS Logo" class="logo">
+            <h1>Payment Portal</h1>
+        </div>
+
+        <div class="bill-details">
+            <div class="row">
+                <span class="label">Service:</span>
+                <span>Emergency Ambulance Transport</span>
+            </div>
+            <div class="row">
+                <span class="label">Trip ID:</span>
+                <span>AMB-2025021901</span>
+            </div>
+            <div class="row">
+                <span class="label">Date & Time:</span>
+                <span>19 Feb 2025, 15:30</span>
+            </div>
+            <div class="row">
+                <span class="label">Pickup Location:</span>
+                <span>123 Park Street, Central Zone</span>
+            </div>
+            <div class="row">
+                <span class="label">Destination:</span>
+                <span>City Hospital, Medical District</span>
+            </div>
+            <div class="row">
+                <span class="label">Total Distance:</span>
+                <span>12.5 km</span>
+            </div>
+            <div class="row" style="margin-top: 15px;">
+                <span class="label">Total Amount:</span>
+                <span class="amount">₹1,250.00</span>
+            </div>
+            <button class="view-breakdown-btn" onclick="toggleBreakdown()">View Details</button>
+            
+            <div id="costBreakdown" class="cost-breakdown" style="display: none;">
+                <div class="cost-row">
+                    <span>Base Charge:</span>
+                    <span>₹500.00</span>
+                </div>
+                <div class="cost-row">
+                    <span>Distance to User (3.2 km):</span>
+                    <span>₹100.00</span>
+                </div>
+                <div class="cost-row">
+                    <span>Transport Distance (12.5 km):</span>
+                    <span>₹375.00</span>
+                </div>
+                <div class="cost-row">
+                    <span>EMT Services:</span>
+                    <span>₹150.00</span>
+                </div>
+                <div class="cost-row">
+                    <span>Equipment Usage:</span>
+                    <span>₹75.00</span>
+                </div>
+                <div class="cost-row">
+                    <span>App Service Fee:</span>
+                    <span>₹20.00</span>
+                </div>
+                <div class="cost-row">
+                    <span>GST (18%):</span>
+                    <span>₹30.00</span>
+                </div>
+            </div>
+        </div>
+
+     
+            </div>
+            <button class="button" onclick="verifyPayment('cash')">Verify receipt</button>
+        </div>
+
+        <div id="successMessage" class="success-message">
+            Payment successful! Your receipt has been sent to your registered mobile number.
+            <br><br>
+            Thank you for using ReachSure EMS services.
+        </div>
+    </div>
+
+    <script>
+        function selectMethod(element, method) {
+            // Remove selected class from all methods
+            const methods = document.querySelectorAll('.payment-method');
+            methods.forEach(m => m.classList.remove('selected'));
+            
+            // Add selected class to clicked method
+            element.classList.add('selected');
+            
+            // Hide all payment sections
+            document.querySelectorAll('.payment-section').forEach(section => {
+                section.style.display = 'none';
+            });
+            
+            // Show selected payment section
+            document.getElementById(method + 'Section').style.display = 'block';
+        }
+        
+        function verifyPayment(method) {
+            // In a real implementation, this would verify the payment with a backend service
+            // For this demo, we'll just show a success message
+            
+            if (method === 'card') {
+                // Validate card details first
+                const inputs = document.querySelectorAll('#cardSection .form-input');
+                let isValid = true;
+                
+                inputs.forEach(input => {
+                    if (!input.value.trim()) {
+                        isValid = false;
+                        input.style.borderColor = '#e74c3c';
+                    } else {
+                        input.style.borderColor = '#ddd';
+                    }
+                });
+                
+                if (!isValid) {
+                    alert('Please fill in all card details correctly.');
+                    return;
+                }
+            }
+            
+            document.getElementById('successMessage').style.display = 'block';
+            
+            // Scroll to the success message
+            document.getElementById('successMessage').scrollIntoView({behavior: 'smooth'});
+        }
+        
+        function toggleBreakdown() {
+            const breakdown = document.getElementById('costBreakdown');
+            if (breakdown.style.display === 'none') {
+                breakdown.style.display = 'block';
+                document.querySelector('.view-breakdown-btn').textContent = 'Hide Details';
+            } else {
+                breakdown.style.display = 'none';
+                document.querySelector('.view-breakdown-btn').textContent = 'View Details';
+            }
+        }
+    </script>
+</body>
+</html>

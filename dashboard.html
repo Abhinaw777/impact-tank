@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ReachSure - Driver Dashboard (Warangal)</title>
+    <!-- Leaflet CSS for maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <!-- Leaflet Routing Machine for path calculation -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: #f5f5f5;
+            min-height: 100vh;
+        }
+
+        .dashboard-header {
+            background: #B22222;
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            margin-right: 10px;
+        }
+
+        .logo-text {
+            font-size: 1.5em;
+            font-weight: 600;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .nav-link {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .nav-link.active {
+            color: #FFD700;
+        }
+
+        .nav-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: #FFD700;
+        }
+
+        .nav-link:hover {
+            color: #FFCCCB;
+        }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+            padding: 2rem;
+        }
+
+        #map {
+            height: 70vh;
+            border-radius: 15px;
+            overflow: hidden;
+            border: 2px solid #ffe5e5;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .dashboard-stats {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            flex: 1;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+        }
+
+        .stat-icon {
+            font-size: 2rem;
+            margin-right: 15px;
+            color: #B22222;
+        }
+
+        .stat-text h3 {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .stat-text p {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .custom-marker-icon {
+            cursor: pointer;
+        }
+
+        /* Notification styles */
+        .notification-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 350px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.2);
+            overflow: hidden;
+            z-index: 9999;
+            transform: translateX(400px);
+            opacity: 0;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .notification-container.show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        .notification-header {
+            background: #B22222;
+            color: white;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .notification-header h3 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .emergency-badge {
+            background: #FF4444;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .notification-body {
+            padding: 20px;
+        }
+
+        .patient-details {
+            margin-bottom: 15px;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+
+        .detail-label {
+            color: #666;
+            font-weight: 500;
+        }
+
+        .detail-value {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .ambulance-type {
+            background: #1E90FF;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 0.85em;
+        }
+
+        .notification-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .accept-btn {
+            background: #32CD32;
+            color: white;
+        }
+
+        .accept-btn:hover {
+            background: #2CA52C;
+        }
+
+        .reject-btn {
+            background: #f5f5f5;
+            color: #666;
+        }
+
+        .reject-btn:hover {
+            background: #e0e0e0;
+        }
+
+        /* Buzzer sound animation */
+        .sound-wave {
+            position: absolute;
+            top: 12px;
+            right: 15px;
+            display: flex;
+            gap: 3px;
+        }
+
+        .sound-wave span {
+            display: block;
+            width: 3px;
+            background: white;
+            animation: sound-wave-animation 1s infinite;
+        }
+
+        .sound-wave span:nth-child(1) {
+            height: 8px;
+            animation-delay: 0s;
+        }
+        .sound-wave span:nth-child(2) {
+            height: 16px;
+            animation-delay: 0.2s;
+        }
+        .sound-wave span:nth-child(3) {
+            height: 12px;
+            animation-delay: 0.4s;
+        }
+        .sound-wave span:nth-child(4) {
+            height: 14px;
+            animation-delay: 0.6s;
+        }
+
+        @keyframes sound-wave-animation {
+            0% { transform: scaleY(0.5); }
+            50% { transform: scaleY(1); }
+            100% { transform: scaleY(0.5); }
+        }
+
+        /* Hide routing machine control panel */
+        .leaflet-routing-container {
+            display: none !important;
+        }
+        
+        /* Customize route line */
+        .leaflet-routing-line {
+            stroke: #B22222 !important;
+            stroke-width: 6 !important;
+            stroke-opacity: 0.7 !important;
+            stroke-linecap: round !important;
+            stroke-linejoin: round !important;
+        }
+        
+        /* Distance & time info panel */
+        .route-info {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            padding: 10px 20px;
+            border-radius: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            z-index: 1000;
+        }
+        
+        .info-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .info-label {
+            color: #666;
+        }
+        
+        .info-value {
+            font-weight: 600;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <header class="dashboard-header">
+        <div class="logo-container">
+            <img src="Screenshot_2025-02-15_190719-removebg-preview (2).png" alt="Your Logo" style="width: 100px; height: auto; display: block;">
+        </div>
+        
+            <div class="logo-text">ReachSure</div>
+        </div>
+        <div class="nav-links">
+            <a href="dashboard.html" class="nav-link active">Home</a>
+            <a href="pasthistory.html" class="nav-link">Past History</a>
+            <a href="contact.html" class="nav-link">Contact Us</a>
+            <a href="about.html" class="nav-link">About Us</a>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <div class="dashboard-stats">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-ambulance"></i>
+                </div>
+                <div class="stat-text">
+                    <h3>Today's Pickups</h3>
+                    <p>2</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-road"></i>
+                </div>
+                <div class="stat-text">
+                    <h3>Distance Covered</h3>
+                    <p>27 km</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="stat-text">
+                    <h3>Avg. Response Time</h3>
+                    <p>9.2 min</p>
+                </div>
+            </div>
+        </div>
+        <div id="map">
+            <div class="route-info" id="routeInfo" style="display: none;">
+                <div class="info-item">
+                    <i class="fas fa-road" style="color: #B22222;"></i>
+                    <span class="info-label">Distance:</span>
+                    <span class="info-value" id="routeDistance">0 km</span>
+                </div>
+                <div class="info-item">
+                    <i class="fas fa-clock" style="color: #B22222;"></i>
+                    <span class="info-label">ETA:</span>
+                    <span class="info-value" id="routeTime">0 min</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Notification Container -->
+    <div class="notification-container" id="notification">
+        <div class="notification-header">
+            <h3>
+                <i class="fas fa-exclamation-circle"></i>
+                New Request
+                <span class="emergency-badge">URGENT</span>
+            </h3>
+            <div class="sound-wave">
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        <div class="notification-body">
+            <div class="patient-details">
+                <div class="detail-row">
+                    <span class="detail-label">Patient Name:</span>
+                    <span class="detail-value">Raju Sharma</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Phone Number:</span>
+                    <span class="detail-value">+91 98451-23670</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Ambulance Type:</span>
+                    <span class="detail-value ambulance-type">ALS</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">EMT Required:</span>
+                    <span class="detail-value">Yes</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Hospital:</span>
+                    <span class="detail-value">Medicover Hospital</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Distance:</span>
+                    <span class="detail-value" id="notificationDistance">Calculating...</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Location:</span>
+                    <span class="detail-value">Near NIT Warangal</span>
+                </div>
+            </div>
+            <div class="notification-actions">
+                <button class="action-btn accept-btn" onclick="acceptRequest()">Accept</button>
+                <button class="action-btn reject-btn" onclick="rejectRequest()">Reject</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <!-- Leaflet Routing Machine JS -->
+    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+    <script>
+        // Warangal coordinates
+        const WARANGAL_CENTER = [17.9689, 79.5941];
+        
+        let map = null;
+        let driverMarker = null;
+        let patientMarker = null;
+        let routeControl = null;
+        let isNotificationShown = false;
+        let buzzerSound = null;
+        
+        // Specific driver and patient locations in Warangal
+        const driverLocation = [17.9749, 79.6036]; // Warangal Fort area
+        const patientLocation = [17.9817, 79.5332]; // NIT Warangal area
+        
+        // Initialize map and create driver's location
+        window.onload = function() {
+            initializeMap();
+            setTimeout(showNotification, 3000); // Show notification after 3 seconds
+            
+            // Create audio element for buzzer sound
+            buzzerSound = new Audio();
+            buzzerSound.src = "https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3";
+            buzzerSound.loop = true;
+        }
+
+        function initializeMap() {
+            if (document.getElementById('map')) {
+                map = L.map('map', {
+                    zoomControl: true,
+                    attributionControl: false
+                }).setView(WARANGAL_CENTER, 12);
+                
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+                
+                // Add driver marker
+                createDriverMarker();
+            }
+        }
+
+        function createDriverMarker() {
+            // Custom SVG marker for driver
+            const driverMarkerIcon = L.divIcon({
+                html: `
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" class="custom-marker-icon">
+                    <path fill="#1E90FF" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                </svg>
+                `,
+                className: '',
+                iconSize: [40, 40],
+                iconAnchor: [20, 40]
+            });
+
+            // Add marker at driver's location
+            driverMarker = L.marker(driverLocation, {
+                icon: driverMarkerIcon
+            }).addTo(map)
+            .bindPopup('Your current location: Warangal Fort')
+            .openPopup();
+            
+            // Center map on driver's location
+            map.setView(driverLocation, 13);
+        }
+
+        function showNotification() {
+            const notification = document.getElementById('notification');
+            notification.classList.add('show');
+            isNotificationShown = true;
+            
+            // Play buzzer sound
+            try {
+                buzzerSound.play();
+            } catch (error) {
+                console.log("Could not play sound: ", error);
+            }
+            
+            // Add patient marker on map
+            createPatientMarker();
+            
+            // Calculate and display route
+            calculateRoute();
+        }
+        
+        function createPatientMarker() {
+            // Custom SVG marker for patient
+            const patientMarkerIcon = L.divIcon({
+                html: `
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24">
+                    <path fill="#FF4444" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                </svg>
+                `,
+                className: '',
+                iconSize: [40, 40],
+                iconAnchor: [20, 40]
+            });
+            
+            // Add marker at patient's location
+            patientMarker = L.marker(patientLocation, {
+                icon: patientMarkerIcon
+            }).addTo(map)
+            .bindPopup('Patient Location: Raju Sharma - Near NIT Warangal')
+            .openPopup();
+        }
+        
+        function calculateRoute() {
+            if (map && driverMarker && patientMarker) {
+                // If there's already a route, remove it
+                if (routeControl) {
+                    map.removeControl(routeControl);
+                }
+                
+                // Create new route
+                routeControl = L.Routing.control({
+                    waypoints: [
+                        L.latLng(driverLocation),
+                        L.latLng(patientLocation)
+                    ],
+                    lineOptions: {
+                        styles: [
+                            {color: '#B22222', opacity: 0.8, weight: 6}
+                        ],
+                        extendToWaypoints: true,
+                        missingRouteTolerance: 0
+                    },
+                    createMarker: function() { return null; }, // Don't create default markers
+                    showAlternatives: false,
+                    fitSelectedRoutes: true,
+                    routeWhileDragging: false
+                }).addTo(map);
+                
+                // Listen for route calculation to update distance and time
+                routeControl.on('routesfound', function(e) {
+                    const routes = e.routes;
+                    const summary = routes[0].summary;
+                    
+                    // Convert distance from meters to kilometers
+                    const distanceInKm = (summary.totalDistance / 1000).toFixed(1);
+                    
+                    // Convert time from seconds to minutes
+                    const timeInMin = Math.round(summary.totalTime / 60);
+                    
+                    // Update route info panel
+                    document.getElementById('routeDistance').textContent = distanceInKm + ' km';
+                    document.getElementById('routeTime').textContent = timeInMin + ' min';
+                    document.getElementById('routeInfo').style.display = 'flex';
+                    
+                    // Update notification distance
+                    document.getElementById('notificationDistance').textContent = 
+                        distanceInKm + ' km (approx. ' + timeInMin + ' min)';
+                    
+                    // Adjust the map to show both markers
+                    map.fitBounds([
+                        driverLocation,
+                        patientLocation
+                    ], {
+                        padding: [100, 100]
+                    });
+                });
+            }
+        }
+
+        function acceptRequest() {
+            // Stop buzzer sound
+            if (buzzerSound) {
+                buzzerSound.pause();
+                buzzerSound.currentTime = 0;
+            }
+            
+            // Hide notification but keep the route
+            const notification = document.getElementById('notification');
+            notification.classList.remove('show');
+            isNotificationShown = false;
+            
+            // Show an acceptance confirmation message
+            const acceptMessage = document.createElement('div');
+            acceptMessage.innerHTML = `
+                <div style="
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: #32CD32;
+                    color: white;
+                    padding: 15px 20px;
+                    border-radius: 10px;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+                    z-index: 9999;
+                    animation: slideIn 0.5s forwards;
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                ">
+                    <i class="fas fa-check-circle" style="font-size: 1.2em;"></i>
+                    <span>Request accepted! Proceed to patient location.</span>
+                </div>
+                <style>
+                    @keyframes slideIn {
+                        from { transform: translateX(400px); opacity: 0; }
+                        to { transform: translateX(0); opacity: 1; }
+                    }
+                </style>
+            `;
+            document.body.appendChild(acceptMessage);
+            
+            // Remove the message after 5 seconds
+            setTimeout(() => {
+                document.body.removeChild(acceptMessage);
+            }, 5000);
+        }
+
+        function rejectRequest() {
+            // Stop buzzer sound
+            if (buzzerSound) {
+                buzzerSound.pause();
+                buzzerSound.currentTime = 0;
+            }
+            
+            // Hide notification
+            const notification = document.getElementById('notification');
+            notification.classList.remove('show');
+            isNotificationShown = false;
+            
+            // Remove patient marker, route and route info
+            if (map) {
+                if (patientMarker) {
+                    map.removeLayer(patientMarker);
+                    patientMarker = null;
+                }
+                
+                if (routeControl) {
+                    map.removeControl(routeControl);
+                    routeControl = null;
+                }
+                
+                document.getElementById('routeInfo').style.display = 'none';
+                
+                // Center map back on driver location
+                map.setView(driverLocation, 13);
+            }
+            
+            // Show a rejection confirmation message
+            const rejectMessage = document.createElement('div');
+            rejectMessage.innerHTML = `
+                <div style="
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: #FF4444;
+                    color: white;
+                    padding: 15px 20px;
+                    border-radius: 10px;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+                    z-index: 9999;
+                    animation: slideIn 0.5s forwards;
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                ">
+                    <i class="fas fa-times-circle" style="font-size: 1.2em;"></i>
+                    <span>Request rejected. Waiting for new requests.</span>
+                </div>
+                <style>
+                    @keyframes slideIn {
+                        from { transform: translateX(400px); opacity: 0; }
+                        to { transform: translateX(0); opacity: 1; }
+                    }
+                </style>
+            `;
+            document.body.appendChild(rejectMessage);
+            
+            // Remove the message after 5 seconds
+            setTimeout(() => {
+                document.body.removeChild(rejectMessage);
+            }, 5000);
+        }
+        setTimeout(() => {
+                window.location.href = 'x.html';
+            }, 10000);
+        
+    </script>
+</body>
+</html>
