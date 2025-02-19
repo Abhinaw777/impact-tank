@@ -4,11 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ReachSure - Driver Dashboard (Warangal)</title>
-    <!-- Leaflet CSS for maps -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-    <!-- Leaflet Routing Machine for path calculation -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
-    <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         * {
@@ -36,12 +33,6 @@
         .logo-container {
             display: flex;
             align-items: center;
-        }
-
-        .logo-icon {
-            width: 36px;
-            height: 36px;
-            margin-right: 10px;
         }
 
         .logo-text {
@@ -129,11 +120,6 @@
             color: #333;
         }
 
-        .custom-marker-icon {
-            cursor: pointer;
-        }
-
-        /* Notification styles */
         .notification-container {
             position: fixed;
             top: 20px;
@@ -251,7 +237,6 @@
             background: #e0e0e0;
         }
 
-        /* Buzzer sound animation */
         .sound-wave {
             position: absolute;
             top: 12px;
@@ -267,44 +252,12 @@
             animation: sound-wave-animation 1s infinite;
         }
 
-        .sound-wave span:nth-child(1) {
-            height: 8px;
-            animation-delay: 0s;
-        }
-        .sound-wave span:nth-child(2) {
-            height: 16px;
-            animation-delay: 0.2s;
-        }
-        .sound-wave span:nth-child(3) {
-            height: 12px;
-            animation-delay: 0.4s;
-        }
-        .sound-wave span:nth-child(4) {
-            height: 14px;
-            animation-delay: 0.6s;
-        }
-
         @keyframes sound-wave-animation {
             0% { transform: scaleY(0.5); }
             50% { transform: scaleY(1); }
             100% { transform: scaleY(0.5); }
         }
 
-        /* Hide routing machine control panel */
-        .leaflet-routing-container {
-            display: none !important;
-        }
-        
-        /* Customize route line */
-        .leaflet-routing-line {
-            stroke: #B22222 !important;
-            stroke-width: 6 !important;
-            stroke-opacity: 0.7 !important;
-            stroke-linecap: round !important;
-            stroke-linejoin: round !important;
-        }
-        
-        /* Distance & time info panel */
         .route-info {
             position: absolute;
             bottom: 20px;
@@ -319,29 +272,43 @@
             gap: 15px;
             z-index: 1000;
         }
-        
+
         .info-item {
             display: flex;
             align-items: center;
             gap: 8px;
         }
-        
+
         .info-label {
             color: #666;
         }
-        
+
         .info-value {
             font-weight: 600;
             color: #333;
+        }
+
+        .leaflet-routing-container {
+            display: none !important;
+        }
+
+        .leaflet-routing-line {
+            stroke: #B22222 !important;
+            stroke-width: 6 !important;
+            stroke-opacity: 0.7 !important;
+            stroke-linecap: round !important;
+            stroke-linejoin: round !important;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
     </style>
 </head>
 <body>
     <header class="dashboard-header">
         <div class="logo-container">
-            <img src="Screenshot_2025-02-15_190719-removebg-preview (2).png" alt="Your Logo" style="width: 100px; height: auto; display: block;">
-        </div>
-        
             <div class="logo-text">ReachSure</div>
         </div>
         <div class="nav-links">
@@ -397,8 +364,7 @@
             </div>
         </div>
     </div>
-    
-    <!-- Notification Container -->
+
     <div class="notification-container" id="notification">
         <div class="notification-header">
             <h3>
@@ -451,31 +417,26 @@
         </div>
     </div>
 
-    <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-    <!-- Leaflet Routing Machine JS -->
     <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
     <script>
-        // Warangal coordinates
         const WARANGAL_CENTER = [17.9689, 79.5941];
-        
         let map = null;
         let driverMarker = null;
         let patientMarker = null;
         let routeControl = null;
         let isNotificationShown = false;
         let buzzerSound = null;
+        let redirectTimer = null;
+        let isRequestHandled = false;
         
-        // Specific driver and patient locations in Warangal
-        const driverLocation = [17.9749, 79.6036]; // Warangal Fort area
-        const patientLocation = [17.9817, 79.5332]; // NIT Warangal area
+        const driverLocation = [17.9749, 79.6036];
+        const patientLocation = [17.9817, 79.5332];
         
-        // Initialize map and create driver's location
         window.onload = function() {
             initializeMap();
-            setTimeout(showNotification, 3000); // Show notification after 3 seconds
+            setTimeout(showNotification, 3000);
             
-            // Create audio element for buzzer sound
             buzzerSound = new Audio();
             buzzerSound.src = "https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3";
             buzzerSound.loop = true;
@@ -489,84 +450,57 @@
                 }).setView(WARANGAL_CENTER, 12);
                 
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-                
-                // Add driver marker
                 createDriverMarker();
             }
         }
 
         function createDriverMarker() {
-            // Custom SVG marker for driver
             const driverMarkerIcon = L.divIcon({
                 html: `
-                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" class="custom-marker-icon">
-                    <path fill="#1E90FF" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-                </svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" class="custom-marker-icon">
+                        <path fill="#1E90FF" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75
+                        // Continuing from the previous createDriverMarker function...
+                        <path fill="#1E90FF" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                    </svg>
                 `,
                 className: '',
                 iconSize: [40, 40],
                 iconAnchor: [20, 40]
             });
 
-            // Add marker at driver's location
             driverMarker = L.marker(driverLocation, {
                 icon: driverMarkerIcon
             }).addTo(map)
             .bindPopup('Your current location: Warangal Fort')
             .openPopup();
             
-            // Center map on driver's location
             map.setView(driverLocation, 13);
         }
 
-        function showNotification() {
-            const notification = document.getElementById('notification');
-            notification.classList.add('show');
-            isNotificationShown = true;
-            
-            // Play buzzer sound
-            try {
-                buzzerSound.play();
-            } catch (error) {
-                console.log("Could not play sound: ", error);
-            }
-            
-            // Add patient marker on map
-            createPatientMarker();
-            
-            // Calculate and display route
-            calculateRoute();
-        }
-        
         function createPatientMarker() {
-            // Custom SVG marker for patient
             const patientMarkerIcon = L.divIcon({
                 html: `
-                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24">
-                    <path fill="#FF4444" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-                </svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24">
+                        <path fill="#FF4444" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                    </svg>
                 `,
                 className: '',
                 iconSize: [40, 40],
                 iconAnchor: [20, 40]
             });
             
-            // Add marker at patient's location
             patientMarker = L.marker(patientLocation, {
                 icon: patientMarkerIcon
             }).addTo(map)
-            .bindPopup('Patient Location: Raju Sharma - Near NIT Warangal')
-            .openPopup();
+            .bindPopup('Patient Location: Raju Sharma - Near NIT Warangal');
         }
-        
+
         function calculateRoute() {
             if (map && driverMarker && patientMarker) {
-                // If there's already a route, remove it
                 if (routeControl) {
                     map.removeControl(routeControl);
                 }
                 
-                // Create new route
                 routeControl = L.Routing.control({
                     waypoints: [
                         L.latLng(driverLocation),
@@ -579,33 +513,26 @@
                         extendToWaypoints: true,
                         missingRouteTolerance: 0
                     },
-                    createMarker: function() { return null; }, // Don't create default markers
+                    createMarker: function() { return null; },
                     showAlternatives: false,
                     fitSelectedRoutes: true,
                     routeWhileDragging: false
                 }).addTo(map);
                 
-                // Listen for route calculation to update distance and time
                 routeControl.on('routesfound', function(e) {
                     const routes = e.routes;
                     const summary = routes[0].summary;
                     
-                    // Convert distance from meters to kilometers
                     const distanceInKm = (summary.totalDistance / 1000).toFixed(1);
-                    
-                    // Convert time from seconds to minutes
                     const timeInMin = Math.round(summary.totalTime / 60);
                     
-                    // Update route info panel
                     document.getElementById('routeDistance').textContent = distanceInKm + ' km';
                     document.getElementById('routeTime').textContent = timeInMin + ' min';
                     document.getElementById('routeInfo').style.display = 'flex';
                     
-                    // Update notification distance
                     document.getElementById('notificationDistance').textContent = 
                         distanceInKm + ' km (approx. ' + timeInMin + ' min)';
                     
-                    // Adjust the map to show both markers
                     map.fitBounds([
                         driverLocation,
                         patientLocation
@@ -616,19 +543,92 @@
             }
         }
 
-        function acceptRequest() {
-            // Stop buzzer sound
+        function showNotification() {
+            const notification = document.getElementById('notification');
+            notification.classList.add('show');
+            isNotificationShown = true;
+            
+            try {
+                buzzerSound.play();
+            } catch (error) {
+                console.log("Could not play sound: ", error);
+            }
+            
+            createPatientMarker();
+            calculateRoute();
+            
+            redirectTimer = setTimeout(() => {
+                if (!isRequestHandled) {
+                    handleNoResponse();
+                }
+            }, 30000); // Increased to 30 seconds for better user experience
+        }
+
+        function handleNoResponse() {
             if (buzzerSound) {
                 buzzerSound.pause();
                 buzzerSound.currentTime = 0;
             }
             
-            // Hide notification but keep the route
+            const timeoutMessage = document.createElement('div');
+            timeoutMessage.innerHTML = `
+                <div style="
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: #FF8C00;
+                    color: white;
+                    padding: 15px 20px;
+                    border-radius: 10px;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+                    z-index: 9999;
+                    animation: slideIn 0.5s forwards;
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                ">
+                    <i class="fas fa-clock" style="font-size: 1.2em;"></i>
+                    <span>No response received. Request expired.</span>
+                </div>
+            `;
+            document.body.appendChild(timeoutMessage);
+            
             const notification = document.getElementById('notification');
             notification.classList.remove('show');
-            isNotificationShown = false;
             
-            // Show an acceptance confirmation message
+            removePatientRouteInfo();
+        }
+
+        function removePatientRouteInfo() {
+            if (map) {
+                if (patientMarker) {
+                    map.removeLayer(patientMarker);
+                    patientMarker = null;
+                }
+                
+                if (routeControl) {
+                    map.removeControl(routeControl);
+                    routeControl = null;
+                }
+                
+                document.getElementById('routeInfo').style.display = 'none';
+                map.setView(driverLocation, 13);
+            }
+        }
+
+        function acceptRequest() {
+            if (isRequestHandled) return;
+            isRequestHandled = true;
+            clearTimeout(redirectTimer);
+            
+            if (buzzerSound) {
+                buzzerSound.pause();
+                buzzerSound.currentTime = 0;
+            }
+            
+            const notification = document.getElementById('notification');
+            notification.classList.remove('show');
+            
             const acceptMessage = document.createElement('div');
             acceptMessage.innerHTML = `
                 <div style="
@@ -647,54 +647,31 @@
                     gap: 10px;
                 ">
                     <i class="fas fa-check-circle" style="font-size: 1.2em;"></i>
-                    <span>Request accepted! Proceed to patient location.</span>
+                    <span>Request accepted! Proceeding to patient location...</span>
                 </div>
-                <style>
-                    @keyframes slideIn {
-                        from { transform: translateX(400px); opacity: 0; }
-                        to { transform: translateX(0); opacity: 1; }
-                    }
-                </style>
             `;
             document.body.appendChild(acceptMessage);
             
-            // Remove the message after 5 seconds
             setTimeout(() => {
-                document.body.removeChild(acceptMessage);
-            }, 5000);
+                window.location.href = 'x.html';
+            }, 3000);
         }
 
         function rejectRequest() {
-            // Stop buzzer sound
+            if (isRequestHandled) return;
+            isRequestHandled = true;
+            clearTimeout(redirectTimer);
+            
             if (buzzerSound) {
                 buzzerSound.pause();
                 buzzerSound.currentTime = 0;
             }
             
-            // Hide notification
             const notification = document.getElementById('notification');
             notification.classList.remove('show');
-            isNotificationShown = false;
             
-            // Remove patient marker, route and route info
-            if (map) {
-                if (patientMarker) {
-                    map.removeLayer(patientMarker);
-                    patientMarker = null;
-                }
-                
-                if (routeControl) {
-                    map.removeControl(routeControl);
-                    routeControl = null;
-                }
-                
-                document.getElementById('routeInfo').style.display = 'none';
-                
-                // Center map back on driver location
-                map.setView(driverLocation, 13);
-            }
+            removePatientRouteInfo();
             
-            // Show a rejection confirmation message
             const rejectMessage = document.createElement('div');
             rejectMessage.innerHTML = `
                 <div style="
@@ -713,26 +690,15 @@
                     gap: 10px;
                 ">
                     <i class="fas fa-times-circle" style="font-size: 1.2em;"></i>
-                    <span>Request rejected. Waiting for new requests.</span>
+                    <span>Request rejected. Ready for new requests.</span>
                 </div>
-                <style>
-                    @keyframes slideIn {
-                        from { transform: translateX(400px); opacity: 0; }
-                        to { transform: translateX(0); opacity: 1; }
-                    }
-                </style>
             `;
             document.body.appendChild(rejectMessage);
             
-            // Remove the message after 5 seconds
             setTimeout(() => {
                 document.body.removeChild(rejectMessage);
             }, 5000);
         }
-        setTimeout(() => {
-                window.location.href = 'x.html';
-            }, 10000);
-        
     </script>
 </body>
 </html>
