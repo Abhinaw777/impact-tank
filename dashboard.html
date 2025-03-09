@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -93,6 +94,7 @@
             overflow: hidden;
             border: 2px solid #ffe5e5;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            position: relative;
         }
 
         .dashboard-stats {
@@ -334,14 +336,77 @@
             font-weight: 600;
             color: #333;
         }
+
+        /* Confirmation message */
+        .confirmation-message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 9999;
+            animation: slideIn 0.5s forwards;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .confirmation-success {
+            background: #32CD32;
+            color: white;
+        }
+
+        .confirmation-reject {
+            background: #FF4444;
+            color: white;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Loading overlay for page transition */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .loading-overlay.show {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 6px solid #f3f3f3;
+            border-top: 6px solid #B22222;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
     <header class="dashboard-header">
         <div class="logo-container">
-            <img src="Screenshot_2025-02-15_190719-removebg-preview (2).png" alt="Your Logo" style="width: 100px; height: auto; display: block;">
-        </div>
-        
             <div class="logo-text">ReachSure</div>
         </div>
         <div class="nav-links">
@@ -451,6 +516,17 @@
         </div>
     </div>
 
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Audio element for custom buzzer -->
+    <audio id="buzzerSound" preload="auto">
+        <!-- Replace "your-buzzer.mp3" with the actual path to your downloaded MP3 file -->
+        <source src="" type="audio/mp3">
+    </audio>
+
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <!-- Leaflet Routing Machine JS -->
@@ -464,38 +540,56 @@
         let patientMarker = null;
         let routeControl = null;
         let isNotificationShown = false;
-        let buzzerSound = null;
+        let buzzerSoundElement = null;
         
         // Specific driver and patient locations in Warangal
         const driverLocation = [17.9749, 79.6036]; // Warangal Fort area
         const patientLocation = [17.9817, 79.5332]; // NIT Warangal area
         
         // Initialize map and create driver's location
-        window.onload = function() {
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get audio element
+            buzzerSoundElement = document.getElementById('buzzerSound');
+            // Set volume and loop properties
+            if (buzzerSoundElement) {
+                buzzerSoundElement.volume = 0.7;
+                buzzerSoundElement.loop = true;
+            }
+            
             initializeMap();
             setTimeout(showNotification, 3000); // Show notification after 3 seconds
-            
-            // Create audio element for buzzer sound
-            buzzerSound = new Audio();
-            buzzerSound.src = "https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3";
-            buzzerSound.loop = true;
-        }
+        });
 
         function initializeMap() {
-            if (document.getElementById('map')) {
+            const mapElement = document.getElementById('map');
+            if (mapElement) {
+                // Create the map
                 map = L.map('map', {
                     zoomControl: true,
                     attributionControl: false
                 }).setView(WARANGAL_CENTER, 12);
                 
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+                // Add the tile layer (map background)
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(map);
                 
                 // Add driver marker
                 createDriverMarker();
+                
+                // Fix: Make sure the map is fully initialized
+                setTimeout(() => {
+                    map.invalidateSize();
+                }, 100);
+            } else {
+                console.error("Map element not found");
             }
         }
 
         function createDriverMarker() {
+            if (!map) return;
+            
             // Custom SVG marker for driver
             const driverMarkerIcon = L.divIcon({
                 html: `
@@ -521,24 +615,48 @@
 
         function showNotification() {
             const notification = document.getElementById('notification');
-            notification.classList.add('show');
-            isNotificationShown = true;
-            
-            // Play buzzer sound
-            try {
-                buzzerSound.play();
-            } catch (error) {
-                console.log("Could not play sound: ", error);
+            if (notification) {
+                notification.classList.add('show');
+                isNotificationShown = true;
+                
+                // Play custom buzzer sound
+                playBuzzerSound();
+                
+                // Add patient marker on map
+                createPatientMarker();
+                
+                // Calculate and display route
+                calculateRoute();
             }
-            
-            // Add patient marker on map
-            createPatientMarker();
-            
-            // Calculate and display route
-            calculateRoute();
+        }
+        
+        function playBuzzerSound() {
+            if (buzzerSoundElement) {
+                // Create a promise to play the sound
+                const playPromise = buzzerSoundElement.play();
+                
+                // Handle potential play failures
+                if (playPromise !== undefined) {
+                    playPromise.catch(error => {
+                        console.log("Could not play custom buzzer sound: ", error);
+                    });
+                }
+            } else {
+                console.error("Buzzer sound element not found");
+            }
+        }
+        
+        function stopBuzzerSound() {
+            // Stop sound from the audio element
+            if (buzzerSoundElement) {
+                buzzerSoundElement.pause();
+                buzzerSoundElement.currentTime = 0;
+            }
         }
         
         function createPatientMarker() {
+            if (!map) return;
+            
             // Custom SVG marker for patient
             const patientMarkerIcon = L.divIcon({
                 html: `
@@ -597,13 +715,19 @@
                     const timeInMin = Math.round(summary.totalTime / 60);
                     
                     // Update route info panel
-                    document.getElementById('routeDistance').textContent = distanceInKm + ' km';
-                    document.getElementById('routeTime').textContent = timeInMin + ' min';
-                    document.getElementById('routeInfo').style.display = 'flex';
+                    const routeDistance = document.getElementById('routeDistance');
+                    const routeTime = document.getElementById('routeTime');
+                    const routeInfo = document.getElementById('routeInfo');
+                    
+                    if (routeDistance) routeDistance.textContent = distanceInKm + ' km';
+                    if (routeTime) routeTime.textContent = timeInMin + ' min';
+                    if (routeInfo) routeInfo.style.display = 'flex';
                     
                     // Update notification distance
-                    document.getElementById('notificationDistance').textContent = 
-                        distanceInKm + ' km (approx. ' + timeInMin + ' min)';
+                    const notificationDistance = document.getElementById('notificationDistance');
+                    if (notificationDistance) {
+                        notificationDistance.textContent = distanceInKm + ' km (approx. ' + timeInMin + ' min)';
+                    }
                     
                     // Adjust the map to show both markers
                     map.fitBounds([
@@ -618,63 +742,41 @@
 
         function acceptRequest() {
             // Stop buzzer sound
-            if (buzzerSound) {
-                buzzerSound.pause();
-                buzzerSound.currentTime = 0;
+            stopBuzzerSound();
+            
+            // Hide notification
+            const notification = document.getElementById('notification');
+            if (notification) {
+                notification.classList.remove('show');
+                isNotificationShown = false;
             }
             
-            // Hide notification but keep the route
-            const notification = document.getElementById('notification');
-            notification.classList.remove('show');
-            isNotificationShown = false;
-            
             // Show an acceptance confirmation message
-            const acceptMessage = document.createElement('div');
-            acceptMessage.innerHTML = `
-                <div style="
-                    position: fixed;
-                    top: 20px;
-                    right: 20px;
-                    background: #32CD32;
-                    color: white;
-                    padding: 15px 20px;
-                    border-radius: 10px;
-                    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-                    z-index: 9999;
-                    animation: slideIn 0.5s forwards;
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                ">
-                    <i class="fas fa-check-circle" style="font-size: 1.2em;"></i>
-                    <span>Request accepted! Proceed to patient location.</span>
-                </div>
-                <style>
-                    @keyframes slideIn {
-                        from { transform: translateX(400px); opacity: 0; }
-                        to { transform: translateX(0); opacity: 1; }
-                    }
-                </style>
-            `;
-            document.body.appendChild(acceptMessage);
+            showConfirmationMessage("Request accepted! Proceeding to patient location.", "success");
             
-            // Remove the message after 5 seconds
-            setTimeout(() => {
-                document.body.removeChild(acceptMessage);
-            }, 5000);
+            // Show loading overlay for page transition
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            if (loadingOverlay) {
+                loadingOverlay.classList.add('show');
+                
+                // Navigate to patient details page after a slight delay
+                setTimeout(() => {
+                    // Navigate to patient details page
+                    window.location.href = "x.html";
+                }, 1500);
+            }
         }
 
         function rejectRequest() {
             // Stop buzzer sound
-            if (buzzerSound) {
-                buzzerSound.pause();
-                buzzerSound.currentTime = 0;
-            }
+            stopBuzzerSound();
             
             // Hide notification
             const notification = document.getElementById('notification');
-            notification.classList.remove('show');
-            isNotificationShown = false;
+            if (notification) {
+                notification.classList.remove('show');
+                isNotificationShown = false;
+            }
             
             // Remove patient marker, route and route info
             if (map) {
@@ -688,51 +790,48 @@
                     routeControl = null;
                 }
                 
-                document.getElementById('routeInfo').style.display = 'none';
+                const routeInfo = document.getElementById('routeInfo');
+                if (routeInfo) {
+                    routeInfo.style.display = 'none';
+                }
                 
                 // Center map back on driver location
                 map.setView(driverLocation, 13);
             }
             
             // Show a rejection confirmation message
-            const rejectMessage = document.createElement('div');
-            rejectMessage.innerHTML = `
-                <div style="
-                    position: fixed;
-                    top: 20px;
-                    right: 20px;
-                    background: #FF4444;
-                    color: white;
-                    padding: 15px 20px;
-                    border-radius: 10px;
-                    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-                    z-index: 9999;
-                    animation: slideIn 0.5s forwards;
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                ">
-                    <i class="fas fa-times-circle" style="font-size: 1.2em;"></i>
-                    <span>Request rejected. Waiting for new requests.</span>
-                </div>
-                <style>
-                    @keyframes slideIn {
-                        from { transform: translateX(400px); opacity: 0; }
-                        to { transform: translateX(0); opacity: 1; }
-                    }
-                </style>
-            `;
-            document.body.appendChild(rejectMessage);
-            
-            // Remove the message after 5 seconds
-            setTimeout(() => {
-                document.body.removeChild(rejectMessage);
-            }, 5000);
+            showConfirmationMessage("Request rejected. Waiting for new requests.", "reject");
         }
-        setTimeout(() => {
-                window.location.href = 'x.html';
-            }, 10000);
         
+        function showConfirmationMessage(message, type) {
+            // Remove any existing confirmation messages
+            const existingMessages = document.querySelectorAll('.confirmation-message');
+            existingMessages.forEach(msg => {
+                if (document.body.contains(msg)) {
+                    document.body.removeChild(msg);
+                }
+            });
+            
+            // Create confirmation message element
+            const confirmationMessage = document.createElement('div');
+            confirmationMessage.className = `confirmation-message confirmation-${type}`;
+            confirmationMessage.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check' : 'times'}-circle" style="font-size: 1.2em;"></i>
+                <span>${message}</span>
+            `;
+            
+            // Add to document
+            document.body.appendChild(confirmationMessage);
+            
+            // Remove after 5 seconds (unless navigating away)
+            if (type !== 'success') {
+                setTimeout(() => {
+                    if (document.body.contains(confirmationMessage)) {
+                        document.body.removeChild(confirmationMessage);
+                    }
+                }, 5000);
+            }
+        }
     </script>
 </body>
 </html>
