@@ -43,8 +43,10 @@
         }
 
         .logo {
-            height: 50px;
-            filter: brightness(0) invert(1);
+            color: var(--white);
+            font-size: 24px;
+            font-weight: bold;
+            text-decoration: none;
         }
 
         .dashboard-container {
@@ -73,35 +75,6 @@
             font-weight: bold;
             color: var(--primary);
             margin: 10px 0;
-        }
-
-        .filters {
-            background: var(--white);
-            padding: 20px;
-            border-radius: 15px;
-            margin-bottom: 30px;
-            display: flex;
-            gap: 20px;
-            flex-wrap: wrap;
-        }
-
-        .filter-group {
-            flex: 1;
-            min-width: 200px;
-        }
-
-        .filter-group label {
-            display: block;
-            margin-bottom: 5px;
-            color: var(--dark);
-        }
-
-        .filter-group select,
-        .filter-group input {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
         }
 
         .transactions-table {
@@ -193,7 +166,7 @@
 </head>
 <body>
     <nav class="navbar">
-        <img src="Screenshot_2025-02-15_190719-removebg-preview (2).png" alt="REACHSURE SOS Logo" class="logo">
+        <div class="logo">ReachSure</div>
     </nav>
 
     <div class="dashboard-container">
@@ -220,33 +193,6 @@
             </div>
         </div>
 
-        <div class="filters">
-            <div class="filter-group">
-                <label for="dateRange">Date Range</label>
-                <select id="dateRange">
-                    <option value="7">Last 7 days</option>
-                    <option value="30" selected>Last 30 days</option>
-                    <option value="90">Last 90 days</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label for="tripType">Trip Type</label>
-                <select id="tripType">
-                    <option value="all">All Types</option>
-                    <option value="als">ALS</option>
-                    <option value="bls">BLS</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label for="status">Status</label>
-                <select id="status">
-                    <option value="all">All Status</option>
-                    <option value="completed">Completed</option>
-                    <option value="pending">Pending</option>
-                </select>
-            </div>
-        </div>
-
         <div class="transactions-table">
             <table>
                 <thead>
@@ -254,7 +200,6 @@
                         <th>Date & Time</th>
                         <th>Trip ID</th>
                         <th>Patient Name</th>
-                        <th>Trip Type</th>
                         <th>Distance</th>
                         <th>Amount</th>
                         <th>Status</th>
@@ -292,15 +237,13 @@
     <script>
         // Dummy data generation
         const dummyData = Array.from({ length: 20 }, (_, i) => ({
-    date: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toLocaleString(),
-    tripId: `T${Math.random().toString(36).substr(2, 8).toUpperCase()}`,
-    patientName: ['John Doe', 'Jane Smith', 'Robert Johnson', 'Mary Williams'][Math.floor(Math.random() * 4)],
-    tripType: Math.random() > 0.5 ? 'ALS' : 'BLS',
-    distance: `${(Math.random() * 20).toFixed(1)} km`,
-    amount: `₹${(Math.random() * 5000 + 1000).toFixed(2)}`,
-    status: 'completed' // Removed 'pending' possibility
-}));
-
+            date: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toLocaleString(),
+            tripId: `T${Math.random().toString(36).substr(2, 8).toUpperCase()}`,
+            patientName: ['John Doe', 'Jane Smith', 'Robert Johnson', 'Mary Williams'][Math.floor(Math.random() * 4)],
+            distance: `${(Math.random() * 20).toFixed(1)} km`,
+            amount: `₹${(Math.random() * 5000 + 1000).toFixed(2)}`,
+            status: 'completed'
+        }));
 
         // Populate table
         const transactionBody = document.getElementById('transactionBody');
@@ -310,7 +253,6 @@
                 <td>${trip.date}</td>
                 <td>${trip.tripId}</td>
                 <td>${trip.patientName}</td>
-                <td>${trip.tripType}</td>
                 <td>${trip.distance}</td>
                 <td>${trip.amount}</td>
                 <td><span class="status-badge status-${trip.status}">${trip.status.toUpperCase()}</span></td>
@@ -335,14 +277,6 @@
             duration: 0.8,
             stagger: 0.2,
             ease: 'power2.out'
-        });
-
-        // Filter functionality
-        document.querySelectorAll('select').forEach(select => {
-            select.addEventListener('change', () => {
-                // Filter implementation would go here
-                console.log('Filtering...');
-            });
         });
     </script>
 </body>
