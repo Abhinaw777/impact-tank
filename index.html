@@ -207,7 +207,7 @@
             <!-- Login Form -->
             <div id="login-form" class="form-container active">
                 <h2 class="form-title">Driver Login</h2>
-                <form onsubmit="return handleLogin(event)">
+                <form id="login-form-element">
                     <div class="form-group">
                         <label for="login-email">Email Address</label>
                         <input type="email" id="login-email" name="email" placeholder="Enter your email" required>
@@ -227,7 +227,7 @@
             <!-- Registration Form -->
             <div id="register-form" class="form-container">
                 <h2 class="form-title">New Driver Registration</h2>
-                <form onsubmit="return handleRegistration(event)">
+                <form id="register-form-element">
                     <div class="form-group">
                         <label for="full-name">Full Name</label>
                         <input type="text" id="full-name" name="fullName" placeholder="Enter your full name" required>
@@ -280,14 +280,10 @@
             }
         }
 
-        function handleLogin(event) {
-            event.preventDefault();
+        function validateLoginForm() {
             let isValid = true;
-            
             document.querySelectorAll('.error').forEach(e => e.style.display = 'none');
-            const loading = document.getElementById('login-loading');
-            loading.style.display = 'block';
-
+            
             const email = document.getElementById('login-email');
             const password = document.getElementById('login-password');
 
@@ -301,28 +297,14 @@
                 isValid = false;
             }
 
-            if (!isValid) {
-                loading.style.display = 'none';
-                return false;
-            }
-
-            setTimeout(() => {
-                loading.style.display = 'none';
-                document.getElementById('login-success').style.display = 'block';
-                window.location.href = '/dashboard.html';
-            }, 1000);
-
-            return false;
+            return isValid;
         }
 
-        function handleRegistration(event) {
-            event.preventDefault();
+        function validateRegistrationForm() {
             let isValid = true;
             
             document.querySelectorAll('.error').forEach(e => e.style.display = 'none');
-            const loading = document.getElementById('register-loading');
-            loading.style.display = 'block';
-
+            
             const fullName = document.getElementById('full-name');
             const email = document.getElementById('register-email');
             const password = document.getElementById('register-password');
@@ -360,19 +342,70 @@
                 isValid = false;
             }
 
-            if (!isValid) {
-                loading.style.display = 'none';
+            return isValid;
+        }
+
+        // Login Form Submit Handler
+        document.getElementById("login-form-element").addEventListener("submit", function(e) {
+            e.preventDefault();
+            
+            if (!validateLoginForm()) {
                 return false;
             }
-
-            setTimeout(() => {
-                loading.style.display = 'none';
-                document.getElementById('register-success').style.display = 'block';
-                window.location.href = '/location.html';
+            
+            // Show loading indicator
+            document.getElementById("login-loading").style.display = "block";
+            
+            // Simulate authentication delay
+            setTimeout(function() {
+                // Hide loading and show success
+                document.getElementById("login-loading").style.display = "none";
+                document.getElementById("login-success").style.display = "block";
+                
+                // Save basic user data in session storage
+                const email = document.getElementById("login-email").value.trim();
+                sessionStorage.setItem("userData", JSON.stringify({
+                    email: email
+                }));
+                
+                // Redirect after short delay
+                setTimeout(function() {
+                    window.location.href = "dashboard.html";
+                }, 1500);
             }, 1000);
-
-            return false;
-        }
+        });
+        
+        // Register Form Submit Handler
+        document.getElementById("register-form-element").addEventListener("submit", function(e) {
+            e.preventDefault();
+            
+            if (!validateRegistrationForm()) {
+                return false;
+            }
+            
+            // Show loading indicator
+            document.getElementById("register-loading").style.display = "block";
+            
+            // Simulate registration delay
+            setTimeout(function() {
+                // Hide loading and show success
+                document.getElementById("register-loading").style.display = "none";
+                document.getElementById("register-success").style.display = "block";
+                
+                // Save user data in session storage
+                const fullName = document.getElementById("full-name").value.trim();
+                const email = document.getElementById("register-email").value.trim();
+                sessionStorage.setItem("userData", JSON.stringify({
+                    fullName: fullName,
+                    email: email
+                }));
+                
+                // Redirect after short delay
+                setTimeout(function() {
+                    window.location.href = "dashboard.html";
+                }, 1500);
+            }, 1000);
+        });
     </script>
 </body>
 </html>
